@@ -25,8 +25,9 @@ const AllEmployee = () => {
     setLoading(true);
     try {
       const data = await getAllEmployees();
-      setEmployees(data.data); 
-      setFilteredEmployees(data.data);
+      const nonAdminEmployees = data.data.filter(employee => employee.role !== 'admin');
+      setEmployees(nonAdminEmployees);
+      setFilteredEmployees(nonAdminEmployees);
     } catch (error) {
       message.error('Failed to fetch employees');
     } finally {
@@ -60,14 +61,8 @@ const AllEmployee = () => {
     try {
       const values = await form.validateFields();
       const updatedEmployee = {
-        name: values.name,
-        email: values.email,
-        mobile_no: values.mobile_no,
-        role: values.role,
-        designation: values.designation,
-        gender: values.gender,
-        course: values.course,
-        img_link: values.img_link,
+        ...values,
+        role: selectedEmployee.role, // Ensure role is not changed
       };
 
       await updateEmployee(selectedEmployee._id, updatedEmployee);
@@ -153,7 +148,7 @@ const AllEmployee = () => {
 
   return (
     <div>
-        <Navbar />
+      <Navbar />
       <h1>Employee List</h1>
       <Space style={{ marginBottom: 16 }}>
         <Button type="primary" onClick={fetchEmployees} loading={loading}>
@@ -163,15 +158,19 @@ const AllEmployee = () => {
           Add Employee
         </Button>
         <Search
-          placeholder="Search by Name, Email or ID"
-          onSearch={handleSearch}
-          onChange={(e) => handleSearch(e.target.value)}
+          placeholder="Search employees"
           value={searchQuery}
+          onChange={(e) => handleSearch(e.target.value)}
+          onSearch={handleSearch}
           enterButton
         />
       </Space>
-      <Table columns={columns} dataSource={filteredEmployees} rowKey="_id" />
-
+      <Table
+        columns={columns}
+        dataSource={filteredEmployees}
+        rowKey="_id"
+        loading={loading}
+      />
       <Modal
         title="Edit Employee"
         visible={editEmployeeVisible}
@@ -179,36 +178,68 @@ const AllEmployee = () => {
         onOk={handleEditSubmit}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="Name" rules={[{ required: true, message: 'Please enter name' }]}>
-            <Input />
+          <Form.Item
+            label="Name"
+            name="name"
+            rules={[{ required: true, message: 'Please enter employee name' }]}
+          >
+            <Input placeholder="Enter employee name" />
           </Form.Item>
-          <Form.Item name="email" label="Email" rules={[{ required: true, message: 'Please enter email' }]}>
-            <Input />
+          <Form.Item
+            label="Email"
+            name="email"
+            rules={[{ required: true, message: 'Please enter employee email' }, { type: 'email', message: 'Please enter a valid email' }]}
+          >
+            <Input placeholder="Enter employee email" />
           </Form.Item>
-          <Form.Item name="mobile_no" label="Mobile Number" rules={[{ required: true, message: 'Please enter mobile number' }]}>
-            <Input />
+          <Form.Item
+            label="Mobile Number"
+            name="mobile_no"
+            rules={[{ required: true, message: 'Please enter mobile number' }]}
+          >
+            <Input placeholder="Enter mobile number" />
           </Form.Item>
-          <Form.Item name="role" label="Role" rules={[{ required: true, message: 'Please select role' }]}>
-            <Select>
+          <Form.Item
+            label="Role"
+            name="role"
+            rules={[{ required: true, message: 'Please select employee role' }]}
+          >
+            <Select placeholder="Select employee role" disabled>
               <Option value="admin">Admin</Option>
               <Option value="user">User</Option>
             </Select>
           </Form.Item>
-          <Form.Item name="designation" label="Designation" rules={[{ required: true, message: 'Please enter designation' }]}>
-            <Input />
+          <Form.Item
+            label="Designation"
+            name="designation"
+            rules={[{ required: true, message: 'Please enter employee designation' }]}
+          >
+            <Input placeholder="Enter employee designation" />
           </Form.Item>
-          <Form.Item name="gender" label="Gender" rules={[{ required: true, message: 'Please select gender' }]}>
-            <Select>
-              <Option value="male">Male</Option>
-              <Option value="female">Female</Option>
-              <Option value="other">Other</Option>
+          <Form.Item
+            label="Gender"
+            name="gender"
+            rules={[{ required: true, message: 'Please select employee gender' }]}
+          >
+            <Select placeholder="Select employee gender">
+              <Option value="Male">Male</Option>
+              <Option value="Female">Female</Option>
+              <Option value="Other">Other</Option>
             </Select>
           </Form.Item>
-          <Form.Item name="course" label="Course" rules={[{ required: true, message: 'Please enter course' }]}>
-            <Input />
+          <Form.Item
+            label="Course"
+            name="course"
+            rules={[{ required: true, message: 'Please enter employee course' }]}
+          >
+            <Input placeholder="Enter employee course" />
           </Form.Item>
-          <Form.Item name="img_link" label="Image Link" rules={[{ required: true, message: 'Please enter image link' }]}>
-            <Input />
+          <Form.Item
+            label="Image Link"
+            name="img_link"
+            rules={[{ required: true, message: 'Please enter employee image link' }]}
+          >
+            <Input placeholder="Enter employee image link" />
           </Form.Item>
         </Form>
       </Modal>

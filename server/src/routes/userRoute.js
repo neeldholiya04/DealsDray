@@ -69,7 +69,6 @@ router.post("/register", async (req, res) => {
 
 router.post("/login", async (req, res) => {
   try {
-    console.dir(req, {depth:null});
     const loginUser = await Login.findOne({ userName: req.body.username });
     console.log("The User found is: " + loginUser);
     if (!loginUser) {

@@ -5,12 +5,14 @@ import Home from "./pages/Home";
 import CreateEmp from "./pages/CreateEmployee";
 import AllEmployee from "./pages/GetAllEmp";
 import { AuthProvider } from './context/AuthContext';
+import PrivateRoute from "./components/PrivateRoute";
 
 function App() {
   return (
     <div className="App">
       <BrowserRouter>
       <AuthProvider>
+        
         <Routes>
         <Route
             path="/home"
@@ -22,6 +24,7 @@ function App() {
           <Route path="/create" element={<CreateEmp />} />
           <Route path="/employees" element={<AllEmployee />} />
         </Routes>
+        <PrivateRoute />
       </AuthProvider>
       </BrowserRouter>
     </div>
