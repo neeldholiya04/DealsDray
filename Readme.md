@@ -13,6 +13,7 @@
 - [API Endpoints](#api-endpoints)
 - [Authentication](#authentication)
 - [Error Handling](#error-handling)
+- [Sample Credentials](#sample-credentials)
 
 ## Introduction
 
@@ -151,4 +152,11 @@ The application implements comprehensive error handling:
 
 - Frontend: Displays user-friendly error messages using Ant Design's message component.
 - Backend: Returns appropriate HTTP status codes and error messages.
+
+## Sample Credentials
+
+For testing purposes, you can use the following sample credentials:
+
+- Username: adminUsername
+- Password: adminPassword
 
