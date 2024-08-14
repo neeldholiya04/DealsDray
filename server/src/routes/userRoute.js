@@ -6,31 +6,58 @@ const jwt = require("jsonwebtoken");
 const router = express.Router();
 const authenticateToken = require("../middlewares/authMiddleware");
 
+
+const handleErrors = (res, error, customMessage = "Internal Server Error") => {
+  console.error(error);
+  const statusCode = error.statusCode || 500;
+  res.status(statusCode).json({
+    success: false,
+    message: customMessage,
+    error: process.env.NODE_ENV === 'development' ? error.message : undefined
+  });
+};
+
 router.post("/register", async (req, res) => {
   try {
-    const userExist = await User.findOne({ email: req.body.email });
+    const { name, email, mobile_no, role, designation, gender, course, img_link, username, password } = req.body;
+
+    if (!name || !email || !role) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email, and role are required fields",
+      });
+    }
+
+    const userExist = await User.findOne({ email });
     if (userExist) {
       return res.status(400).json({
         success: false,
-        message: "User already exists",
+        message: "User with this email already exists",
       });
     }
 
     const newUser = new User({
-      name: req.body.name,
-      email: req.body.email,
-      mobile_no: req.body.mobile_no,
-      role: req.body.role,
-      designation: req.body.designation,
-      gender: req.body.gender,
-      course: req.body.course,
-      img_link: req.body.img_link,
+      name,
+      email,
+      mobile_no,
+      role,
+      designation,
+      gender,
+      course,
+      img_link,
     });
 
     const savedUser = await newUser.save();
 
-    if (req.body.role === 'admin') {
-      const usernameExist = await Login.findOne({ userName: req.body.username });
+    if (role === 'admin') {
+      if (!username || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "Username and password are required for admin registration",
+        });
+      }
+
+      const usernameExist = await Login.findOne({ userName: username });
       if (usernameExist) {
         return res.status(400).json({
           success: false,
@@ -39,14 +66,14 @@ router.post("/register", async (req, res) => {
       }
 
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = bcrypt.hashSync(req.body.password, salt);
+      const hashedPassword = await bcrypt.hash(password, salt);
 
       const lastLoginEntry = await Login.findOne().sort({ sno: -1 });
       const sno = lastLoginEntry ? lastLoginEntry.sno + 1 : 1;
 
       const newLogin = new Login({
         sno,
-        userName: req.body.username,
+        userName: username,
         password: hashedPassword,
         user: savedUser._id,
       });
@@ -58,29 +85,31 @@ router.post("/register", async (req, res) => {
       success: true,
       message: "User created successfully",
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
+  } catch (error) {
+    handleErrors(res, error, "Error during user registration");
   }
 });
 
 router.post("/login", async (req, res) => {
   try {
-    const loginUser = await Login.findOne({ userName: req.body.username });
-    console.log("The User found is: " + loginUser);
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Username and password are required",
+      });
+    }
+
+    const loginUser = await Login.findOne({ userName: username });
     if (!loginUser) {
       return res.status(404).json({
         success: false,
         message: "User not found",
       });
     }
-    
 
-
-    const validPassword = await bcrypt.compare(req.body.password, loginUser.password);
+    const validPassword = await bcrypt.compare(password, loginUser.password);
     if (!validPassword) {
       return res.status(401).json({
         success: false,
@@ -99,43 +128,28 @@ router.post("/login", async (req, res) => {
       message: "Login successful",
       accessToken: accessToken,
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
+  } catch (error) {
+    handleErrors(res, error, "Error during login");
   }
 });
 
 router.get("/employees", async (req, res) => {
   try {
-    const employees = await User.find();
+    const employees = await User.find().select('-__v');
     res.status(200).json({
       success: true,
       data: employees,
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
+  } catch (error) {
+    handleErrors(res, error, "Error fetching employees");
   }
 });
 
-
 router.delete("/employees/:id", async (req, res) => {
   try {
-    const userToDelete = await User.findById(req.params.id);
-    if (!userToDelete) {
-      return res.status(404).json({
-        success: false,
-        message: "Employee not found",
-      });
-    }
+    const { id } = req.params;
 
-    const deletedUser = await User.findByIdAndDelete(req.params.id);
+    const deletedUser = await User.findByIdAndDelete(id);
     if (!deletedUser) {
       return res.status(404).json({
         success: false,
@@ -144,13 +158,7 @@ router.delete("/employees/:id", async (req, res) => {
     }
 
     if (deletedUser.role === 'admin') {
-      const deletedLogin = await Login.findOneAndDelete({ userName: deletedUser.username });
-      if (!deletedLogin) {
-        return res.status(404).json({
-          success: false,
-          message: "Admin login not found",
-        });
-      }
+      await Login.findOneAndDelete({ user: id });
     }
 
     res.status(200).json({
@@ -158,32 +166,20 @@ router.delete("/employees/:id", async (req, res) => {
       message: "Employee deleted successfully",
       data: deletedUser,
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
+  } catch (error) {
+    handleErrors(res, error, "Error deleting employee");
   }
 });
 
 router.put("/employee/:id", async (req, res) => {
   try {
+    const { id } = req.params;
+    const updateData = req.body;
+
     const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      {
-        $set: {
-          name: req.body.name,
-          email: req.body.email,
-          mobile_no: req.body.mobile_no,
-          role: req.body.role,
-          designation: req.body.designation,
-          gender: req.body.gender,
-          course: req.body.course,
-          img_link: req.body.img_link,
-        },
-      },
-      { new: true }
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
     );
 
     if (!updatedUser) {
@@ -198,21 +194,14 @@ router.put("/employee/:id", async (req, res) => {
       message: "User updated successfully",
       data: updatedUser,
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
+  } catch (error) {
+    handleErrors(res, error, "Error updating employee");
   }
 });
 
-
-
-
 router.get("/search/:username", authenticateToken, async (req, res) => {
   try {
-    const username = req.params.username;
+    const { username } = req.params;
     const loginDetails = await Login.findOne({ userName: username }).populate("user");
 
     if (!loginDetails || !loginDetails.user) {
@@ -222,19 +211,19 @@ router.get("/search/:username", authenticateToken, async (req, res) => {
       });
     }
 
+    const { user } = loginDetails;
     const response = {
       username: loginDetails.userName,
-      password: loginDetails.password,
       userDetails: {
-        name: loginDetails.user.name,
-        email: loginDetails.user.email,
-        mobile_no: loginDetails.user.mobile_no,
-        role: loginDetails.user.role,
-        designation: loginDetails.user.designation,
-        gender: loginDetails.user.gender,
-        course: loginDetails.user.course,
-        img_link: loginDetails.user.img_link,
-        create_date: loginDetails.user.create_date,
+        name: user.name,
+        email: user.email,
+        mobile_no: user.mobile_no,
+        role: user.role,
+        designation: user.designation,
+        gender: user.gender,
+        course: user.course,
+        img_link: user.img_link,
+        create_date: user.create_date,
       }
     };
 
@@ -242,19 +231,9 @@ router.get("/search/:username", authenticateToken, async (req, res) => {
       success: true,
       data: response,
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
+  } catch (error) {
+    handleErrors(res, error, "Error searching for user");
   }
 });
-
-
-
-
-
-
 
 module.exports = router;
