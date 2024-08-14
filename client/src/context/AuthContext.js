@@ -12,7 +12,6 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      // You might want to validate the token here
       setUser({ isAuthenticated: true });
     }
   }, []);

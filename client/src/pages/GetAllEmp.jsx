@@ -111,7 +111,7 @@ const AllEmployee = () => {
       const values = await form.validateFields();
       const updatedEmployee = {
         ...values,
-        role: selectedEmployee.role, // Ensure role is not changed
+        role: selectedEmployee.role, 
       };
 
       await updateEmployee(selectedEmployee._id, updatedEmployee);
@@ -122,7 +122,6 @@ const AllEmployee = () => {
       form.resetFields();
     } catch (error) {
       if (error.errorFields) {
-        // Form validation error
         form.scrollToField(error.errorFields[0].name);
       } else {
         handleErrorResponse(error, 'Failed to update employee');
