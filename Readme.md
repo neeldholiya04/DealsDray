@@ -13,8 +13,6 @@
 - [API Endpoints](#api-endpoints)
 - [Authentication](#authentication)
 - [Error Handling](#error-handling)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Introduction
 
